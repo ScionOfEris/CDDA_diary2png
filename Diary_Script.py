@@ -1,12 +1,66 @@
 #!/bin/env python3
 
 from PIL import Image, ImageDraw, ImageFont
+import argparse
 import textwrap
 import re
 import sys
 
+parser = argparse.ArgumentParser(description="Protect VMs with Recoverpoint")
+
+
+parser.add_argument(
+    "--background",
+    metavar="Background Color",
+    type=str,
+    help="Background color of the image",
+    default="black",
+    required=False,
+)
+parser.add_argument(
+    "--text_color",
+    metavar="Text Color",
+    type=str,
+    help="Color of the text in the image",
+    default="green",
+    required=False,
+)
+parser.add_argument(
+    "--size",
+    metavar="Font Size",
+    type=int,
+    help="Font size of the text in the image",
+    default=30,
+    required=False,
+)
+parser.add_argument(
+    "--height",
+    metavar="Height",
+    type=int,
+    help="Height of the image in pixels",
+    default="1200",
+    required=False,
+)
+parser.add_argument(
+    "--width",
+    metavar="Width",
+    type=int,
+    help="Width of the image in pixels",
+    default="800",
+    required=False,
+)
+
+parser.add_argument(
+    "diary",
+    type=str,
+    metavar="Diary File",
+    help="Diary file to convert to PNG images",
+)
+
+args = parser.parse_args()
+
 # Load your text file
-with open("Chau_Hutsons_diary.txt", "r", encoding="utf-8") as f:
+with open(args.diary, "r", encoding="utf-8") as f:
     content = f.read()
 
 # first dos2unix the file
@@ -18,20 +72,19 @@ entries = [e.strip() for e in entries if e.strip()]  # Clean empty entries
 
 def create_image(entry_text, entry_num):
     """Generates an image from entry text."""
-    img_width, img_height = 800, 1200
-    background_color = (255, 255, 255)
-    text_color = (0, 0, 0)
-    
+    img_width, img_height = args.width, args.height
+    background_color = args.background
+    text_color = args.text_color
     img = Image.new("RGB", (img_width, img_height), background_color)
     draw = ImageDraw.Draw(img)
 
-    font = ImageFont.load_default()  # You can use a custom font
+    font = ImageFont.load_default(size=args.size)  # You can use a custom font
     #fontsize = 20
     #font = ImageFont.truetype("arial.ttf", fontsize)  # Load a TTF font
 
-    #wrapped_text = textwrap.fill(entry_text, width=80)  # Wrap text for readability
+    #wrapped_text = textwrap.fill(entry_text, width=52)  # Wrap text for readability
     wrapped_text = entry_text
-    draw.text((20, 20), wrapped_text, fill=text_color, font=font)
+    draw.text((20, 20), wrapped_text, fill=text_color, font=font, )
 
     img.save(f"Entry_{entry_num}.png")
 
