@@ -38,7 +38,7 @@ parser.add_argument(
     metavar="Height",
     type=int,
     help="Height of the image in pixels",
-    default="1200",
+    default="4800",
     required=False,
 )
 parser.add_argument(
@@ -88,31 +88,46 @@ def create_image(entry_text, entry_num):
 
     img.save(f"Entry_{entry_num}.png")
 
-# Process each entry
+SECTION_HEADERS = {
+    "Stats:", "Skills:", "Proficiencies:", "Mutations:", "New missions:",
+    "Active missions:", "New completed missions:", "Kills:", "NPC Killed:",
+    "New Bionics:", "Gained Mutation:", "Lost Mutation:"
+}
+
 for i, entry in enumerate(entries, start=1):
+    parts = re.split(r'\n\s*\n', entry)
+    if not parts:
+        continue
 
-    parts = entry.split("\n\n")
-    parts = re.split(r'\n\s*\n', entry)  # Split by double newlines
-    date_line_parts = parts[0].split(',',4)
-    if len(date_line_parts) > 4:
-        date_line = ','.join(date_line_parts[:4]) + ',\n' + date_line_parts[4]
-    else:
-        date_line = ','.join(date_line_parts)
-    
-    header = ''
-    diary = ''
+    date_line = parts[0]
+    diary_blocks = []
+    sections = []
+    in_diary = False
 
-    # go through each part until you find one that does not start with text followed by a colon
-    # and a newline
-    for part in parts[1:]:
-        if re.match(r"^[A-Z a-z]+:", part):
-            header += part + "\n\n"
+    # Start after the entry line
+    idx = 1
+    # Skip all leading section headers
+    while idx < len(parts):
+        part_stripped = parts[idx].strip()
+        if any(part_stripped.startswith(h) for h in SECTION_HEADERS):
+            idx += 1
         else:
-            diary += part + "\n\n"
+            break
 
-    structured_text = f"{date_line}\n\n{diary}\n\n{header}"
-    #print(structured_text)
+    # Collect diary blocks until a section header is found
+    while idx < len(parts):
+        part_stripped = parts[idx].strip()
+        if any(part_stripped.startswith(h) for h in SECTION_HEADERS):
+            break
+        diary_blocks.append(parts[idx])
+        idx += 1
 
+    # The rest are sections
+    sections = parts[idx:]
+
+    diary = "\n\n".join(diary_blocks).strip()
+    #structured_text = f"{date_line}\n\n{diary}\n\n" + "\n\n".join(sections)
+    structured_text = f"{date_line}\n\n{diary}"
     create_image(structured_text, i)
 
 print("PNG files created successfully!")
