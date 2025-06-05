@@ -7,3 +7,15 @@ into better sized chunks Runs into the issue of only 20 pictures per post on red
 But... it works.  more or less
 
 Requires the pillow python library.
+
+It also makes the assumptions that you always start your Diary text with a tag ("Diary:", though that can be modified with a command
+line flag).  I was unable to automatically figure out where that text started, largley due to the generally chaotic nature of that
+text file, and the more specifically chaotic nature of the quest entries (other entries at least don't seem to add spurious line
+breaks).  But just make the first line of every Diary entry:
+Diary:
+and the script should work.
+
+Usage
+./Diary_Script.py -h
+shows options, but most likely you will simply run:
+./Diary_Script.py <Diary Text File>
