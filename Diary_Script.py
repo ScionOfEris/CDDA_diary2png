@@ -85,7 +85,7 @@ entries = re.split(r"\n\nEntry:", content)  # Split entries
 entries = [e.strip() for e in entries if e.strip()]  # Clean empty entries
 
 
-def create_image(entry_text, entry_num):
+def create_image(entry_text, entry_tag):
     """Generates an image from entry text."""
     img_width = args.width
 
@@ -107,7 +107,7 @@ def create_image(entry_text, entry_num):
     wrapped_text = entry_text
     draw.text((20, 20), wrapped_text, fill=text_color, font=font, )
 
-    img.save(f"Entry_{entry_num}.png")
+    img.save(f"Entry_{entry_tag}.png")
 
 
 for i, entry in enumerate(entries, start=1):
@@ -126,26 +126,32 @@ for i, entry in enumerate(entries, start=1):
     # Everything between date_line and diary_id
     between = entry[len(date_line):diary_id_idx].strip()
 
-    # Compose structured_text: date_line, then diary_text, then between
-    structured_text = f"{date_line}\n\n{diary_text}"
+    # Compose diary_structured_text: date_line, then diary_text
+    diary_structured_text = f"{date_line}\n\n{diary_text}"
+
+    # Compose data_structured_text: date_line, then between
+    data_structured_text = f"{date_line}"
     if between:
-        structured_text += f"\n\n{between}"
+        data_structured_text += f"\n\n{between}"
 
-    # Cut any line that is over max_line_length into multiple lines, breaking at whitespace
-    max_len = args.max_line_length
-    wrapped_lines = []
-    for line in structured_text.splitlines():
-        while len(line) > max_len:
-            # Find the last whitespace before max_len
-            break_idx = line.rfind(' ', 0, max_len)
-            if break_idx == -1:
-                break_idx = max_len  # No whitespace found, hard break
-            wrapped_lines.append(line[:break_idx].rstrip())
-            line = line[break_idx:].lstrip()
-        wrapped_lines.append(line)
-    structured_text = "\n".join(wrapped_lines)
+    # Function to wrap lines to max_line_length
+    def wrap_text(text, max_len):
+        wrapped_lines = []
+        for line in text.splitlines():
+            while len(line) > max_len:
+                break_idx = line.rfind(' ', 0, max_len)
+                if break_idx == -1:
+                    break_idx = max_len  # No whitespace found, hard break
+                wrapped_lines.append(line[:break_idx].rstrip())
+                line = line[break_idx:].lstrip()
+            wrapped_lines.append(line)
+        return "\n".join(wrapped_lines)
 
-    create_image(structured_text, i)
+    diary_structured_text = wrap_text(diary_structured_text, args.max_line_length)
+    data_structured_text = wrap_text(data_structured_text, args.max_line_length)
+
+    create_image(diary_structured_text, f"{i}_diary")
+    create_image(data_structured_text, f"{i}_stats")
 
 print("PNG files created successfully!")
 
