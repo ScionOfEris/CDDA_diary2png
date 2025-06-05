@@ -37,8 +37,7 @@ parser.add_argument(
     "--height",
     metavar="Height",
     type=int,
-    help="Height of the image in pixels",
-    default="4800",
+    help="Maximum height of the image in pixels",
     required=False,
 )
 parser.add_argument(
@@ -88,7 +87,13 @@ entries = [e.strip() for e in entries if e.strip()]  # Clean empty entries
 
 def create_image(entry_text, entry_num):
     """Generates an image from entry text."""
-    img_width, img_height = args.width, args.height
+    img_width = args.width
+
+    # Calculate height based on the number of lines in the text
+    lines = entry_text.splitlines()
+    line_height = args.size + 5  # Add some padding for line height
+    img_height = args.height if args.height else line_height * len(lines) + 10  # Add padding
+
     background_color = args.background
     text_color = args.text_color
     img = Image.new("RGB", (img_width, img_height), background_color)
