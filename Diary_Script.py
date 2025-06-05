@@ -37,7 +37,7 @@ parser.add_argument(
     "--height",
     metavar="Height",
     type=int,
-    help="Maximum height of the image in pixels",
+    help="Maximum height of the image in pixels (this will cut of text if it exceeds this height)",
     required=False,
 )
 parser.add_argument(
@@ -64,10 +64,19 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
+    "--format_style",
+    type=str,
+    metavar="Format Style",
+    help="Format style for the text (options: 'default', 'wrap_long_side', 'trunc_long_side')",
+    default="default",
+    choices=["default", "wrap_long_side", "trunc_long_side"],
+    required=False, 
+)
+parser.add_argument(
     "--max_line_length",
     type=int,
     metavar="Max Line Length",
-    help="Maximum line length for text wrapping",
+    help="Maximum line length for text wrapping (per side)",
     default=52,
     required=False,
 )
@@ -165,6 +174,64 @@ for i, entry in enumerate(entries, start=1):
 
     diary_structured_text = wrap_text(diary_text, args.max_line_length)
     data_structured_text = wrap_text(between, args.max_line_length)
+
+    # for data, delete emtpy lines if the following line contains no colon
+    # Remove superfluous blank lines from data_structured_text
+    data_lines = data_structured_text.splitlines()
+    cleaned_data_lines = []
+    for idx, line in enumerate(data_lines):
+        if line.strip() == "":
+            # Check if next line exists and is a section header (ends with ':')
+            if idx + 1 < len(data_lines) and data_lines[idx + 1].strip().endswith(":"):
+                cleaned_data_lines.append(line)
+            # Else, skip this blank line
+        else:
+            cleaned_data_lines.append(line)
+    data_structured_text = "\n".join(cleaned_data_lines)
+
+    # Apply format_style logic
+    if args.format_style == "wrap_long_side":
+        data_lines = data_structured_text.splitlines()
+        diary_lines = diary_structured_text.splitlines()
+        len_data = len(data_lines)
+        len_diary = len(diary_lines)
+        diff = abs(len_data - len_diary)
+        if diff > 10:
+            # Add 4 lines of padding and a continuation note to the short side
+            pad_lines = [""] * 4 + ["(continued from other side)"]
+            diff = diff - 5 # to account for the 4 padding lines and the continuation note
+            if len_data < len_diary:
+                data_lines += pad_lines
+                # Move last X lines from diary to data
+                x = diff // 2
+                moved = diary_lines[-x:] if x > 0 else []
+                data_lines += moved
+                diary_lines = diary_lines[:-x] if x > 0 else diary_lines
+            else:
+                diary_lines += pad_lines
+                # Move last X lines from data to diary
+                x = diff // 2
+                moved = data_lines[-x:] if x > 0 else []
+                diary_lines += moved
+                data_lines = data_lines[:-x] if x > 0 else data_lines
+            # Re-join for image creation
+            data_structured_text = "\n".join(data_lines)
+            diary_structured_text = "\n".join(diary_lines)
+
+    elif args.format_style == "trunc_long_side":
+        data_lines = data_structured_text.splitlines()
+        diary_lines = diary_structured_text.splitlines()
+        len_data = len(data_lines)
+        len_diary = len(diary_lines)
+        diff = abs(len_data - len_diary)
+        if len_data > len_diary:
+            data_lines = data_lines[:len_diary]
+            data_lines += ["(truncated)"]
+        elif len_diary > len_data:
+            diary_lines = diary_lines[:len_data]
+            diary_lines += ["(truncated)"]
+        data_structured_text = "\n".join(data_lines)
+        diary_structured_text = "\n".join(diary_lines)
 
     #create_image(diary_structured_text, f"{i}_diary")
     #create_image(data_structured_text, f"{i}_stats")
