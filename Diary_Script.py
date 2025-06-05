@@ -56,6 +56,22 @@ parser.add_argument(
     metavar="Diary File",
     help="Diary file to convert to PNG images",
 )
+parser.add_argument(
+    "--diary_id",
+    type=str,
+    metavar="Diary ID String",
+    help="String to identify the diary entry's start",
+    default="Diary:",
+    required=False,
+)
+parser.add_argument(
+    "--max_line_length",
+    type=int,
+    metavar="Max Line Length",
+    help="Maximum line length for text wrapping",
+    default=52,
+    required=False,
+)
 
 args = parser.parse_args()
 
@@ -88,46 +104,42 @@ def create_image(entry_text, entry_num):
 
     img.save(f"Entry_{entry_num}.png")
 
-SECTION_HEADERS = {
-    "Stats:", "Skills:", "Proficiencies:", "Mutations:", "New missions:",
-    "Active missions:", "New completed missions:", "Kills:", "NPC Killed:",
-    "New Bionics:", "Gained Mutation:", "Lost Mutation:"
-}
 
 for i, entry in enumerate(entries, start=1):
-    parts = re.split(r'\n\s*\n', entry)
-    if not parts:
+    date_line, *rest = re.split(r'\n\s*\n', entry, maxsplit=1)
+    diary_id = args.diary_id
+
+    # Find the diary_id tag in the entry
+    diary_id_idx = entry.find(diary_id)
+    if diary_id_idx == -1:
+        # If diary_id not found, fallback to original logic or skip
         continue
 
-    date_line = parts[0]
-    diary_blocks = []
-    sections = []
-    in_diary = False
+    # Everything after diary_id is the diary text
+    diary_text = entry[diary_id_idx + len(diary_id):].strip()
 
-    # Start after the entry line
-    idx = 1
-    # Skip all leading section headers
-    while idx < len(parts):
-        part_stripped = parts[idx].strip()
-        if any(part_stripped.startswith(h) for h in SECTION_HEADERS):
-            idx += 1
-        else:
-            break
+    # Everything between date_line and diary_id
+    between = entry[len(date_line):diary_id_idx].strip()
 
-    # Collect diary blocks until a section header is found
-    while idx < len(parts):
-        part_stripped = parts[idx].strip()
-        if any(part_stripped.startswith(h) for h in SECTION_HEADERS):
-            break
-        diary_blocks.append(parts[idx])
-        idx += 1
+    # Compose structured_text: date_line, then diary_text, then between
+    structured_text = f"{date_line}\n\n{diary_text}"
+    if between:
+        structured_text += f"\n\n{between}"
 
-    # The rest are sections
-    sections = parts[idx:]
+    # Cut any line that is over max_line_length into multiple lines, breaking at whitespace
+    max_len = args.max_line_length
+    wrapped_lines = []
+    for line in structured_text.splitlines():
+        while len(line) > max_len:
+            # Find the last whitespace before max_len
+            break_idx = line.rfind(' ', 0, max_len)
+            if break_idx == -1:
+                break_idx = max_len  # No whitespace found, hard break
+            wrapped_lines.append(line[:break_idx].rstrip())
+            line = line[break_idx:].lstrip()
+        wrapped_lines.append(line)
+    structured_text = "\n".join(wrapped_lines)
 
-    diary = "\n\n".join(diary_blocks).strip()
-    #structured_text = f"{date_line}\n\n{diary}\n\n" + "\n\n".join(sections)
-    structured_text = f"{date_line}\n\n{diary}"
     create_image(structured_text, i)
 
 print("PNG files created successfully!")
